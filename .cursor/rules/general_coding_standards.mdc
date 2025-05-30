@@ -1,0 +1,60 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Documentación y Comentarios
+
+-   Incluye siempre docstrings en español para todas las funciones y clases.
+-   Formato de Docstring:
+    ```python
+    """Descripción breve de la función.
+
+    Args:
+        param_nombre (tipo): Descripción del parámetro.
+
+    Returns:
+        tipo: Descripción de lo que retorna.
+    """
+    ```
+-   Utiliza comentarios en línea únicamente para explicar lógica particularmente compleja o no evidente.
+-   Evita generar comentarios TODO o FIXME.
+-   No incluyas comentarios obvios, redundantes o código comentado. El código debe ser funcional y limpio.
+
+## Legibilidad y Estilo
+
+-   Escribe código claro y legible.
+-   Máximo 80 caracteres por línea de código.
+-   Utiliza espacios alrededor de los operadores (ej: `a = b + c`).
+-   Ordena los imports de la siguiente manera:
+    1.  Bibliotecas estándar de Python.
+    2.  Bibliotecas de terceros.
+    3.  Módulos locales de la aplicación.
+    ```python
+    # Ejemplo de orden de imports:
+    # 1. Estándar
+    import os
+    import sys
+    from datetime import datetime
+
+    # 2. Terceros
+    import streamlit as st
+    # from langchain import LLM # Asumiendo que es un ejemplo
+
+    # 3. Locales
+    from core.config import settings
+    from agents.agent import AgentBase
+    ```
+-   Usa dos líneas en blanco para separar clases y una línea en blanco para separar métodos dentro de una clase.
+
+## Trabajo Colaborativo y Calidad de Código
+
+-   Cada función debe ser lo más autocontenida y testeable posible.
+-   Evita dependencias circulares entre módulos.
+-   Utiliza type hints (anotaciones de tipo) en todos los parámetros de funciones y en los valores de retorno.
+-   Genera código que cumpla con los estándares de `flake8` y `black`.
+-   Asegura la corrección de tipos compatible con `mypy`.
+-   Evita la duplicación de código. Considera crear funciones o métodos reutilizables si identificas patrones repetidos.
+-   No incluyas sentencias `print()` para debug en el código final.
+-   El código generado debe estar libre de imports no utilizados y variables no usadas.
+

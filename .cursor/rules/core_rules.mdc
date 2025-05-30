@@ -1,0 +1,11 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## Desarrollo en `core/`
+
+-   **`config.py`**: Centraliza aquí toda la configuración de la aplicación. Carga variables de entorno y define constantes de configuración. Las constantes deben estar en MAYÚSCULAS_CON_GUIONES_BAJOS.
+-   **`security.py`**: Implementa funcionalidades relacionadas con la autenticación, autorización, y otras medidas de seguridad.
+-   **`models.py`**: Define aquí los modelos de datos (ej: clases Pydantic, modelos SQLAlchemy) que se utilizan en la aplicación.
+-   **`logger.py`**: Configura el logger de la aplicación para un registro consistente y útil. Evita `print()` para el logging.

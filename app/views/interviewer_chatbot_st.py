@@ -2,16 +2,12 @@ import streamlit as st
 import sys
 import os
 import json
-import ast
 from pathlib import Path
-from cryptography.fernet import Fernet
 
-# Agregar el directorio raíz al path para importar el agente
-root_dir = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(root_dir))
+# Agregar el directorio raíz al path para las importaciones
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from agents.agent import crear_agente
-#from agents.agent import crear_agente_langgraph
+# Importar configuraciones
 from core.rrhh_config import (
     INTERFACE_CONFIG, 
     BUTTONS_CONFIG, 
@@ -20,57 +16,43 @@ from core.rrhh_config import (
     DOWNLOAD_CONFIG
 )
 
+# Importar funciones de seguridad
+from core.security import desencriptar_datos_usuario
+
+# Importar agente directamente (simplificado)
+from agents.simple_agent import create_simple_rrhh_agent
 
 def lanzar_chatbot():
     """
     Interfaz de Streamlit para el agente conversacional de RRHH
     """
     
-    # Función para desencriptar texto
-    def desencriptar_texto(texto_encriptado, clave):
-        f = Fernet(clave)
-
-        try:
-            # Intenta evaluar de forma segura (solo literales)
-            b = ast.literal_eval(texto_encriptado)
-            print(f"Texto evaluado: {b}")
-            print(type(b))
-        except Exception:
-            # Si falla, intenta corregir
-            texto_encriptado += "'"
-            b = ast.literal_eval(texto_encriptado)
-            print("Texto inválido, se agregó un apóstrofo.")
-            print(f"Texto corregido: {texto_encriptado}")
-        
-        return f.decrypt(b).decode()
-
     # Leer token cifrado en la URL
     query_params = st.query_params
     token = query_params.get("token", None)
 
     if token:
         try:
-            # La clave debe estar almacenada de forma segura, aquí la obtenemos de una variable de entorno
-            clave = os.getenv("FERNET_KEY").encode()
-            # Desencriptar el JSON
-            json_desencriptado = desencriptar_texto(token, clave)
-            print(f"Token desencriptado: {json_desencriptado}")
-            # Convertir el JSON a diccionario
-            datos_usuario = json.loads(json_desencriptado)
+            # Desencriptar directamente a diccionario usando la función modularizada
+            datos_usuario = desencriptar_datos_usuario(token)
+            print(f"Datos usuario desencriptados: {datos_usuario}")
+            
             nombre_usuario = datos_usuario.get("nombre", "Candidato")
             telefono_usuario = datos_usuario.get("phone")
-            id_vacancy = datos_usuario.get("vacancy")
+            id_job_offer_raw = datos_usuario.get("job-offer")
+            # Convertir id_job_offer a string si existe
+            id_job_offer = str(id_job_offer_raw) if id_job_offer_raw is not None else None
         except Exception as e:
             st.error(f"Error al procesar el token: {str(e)}")
             nombre_usuario = "Candidato"
             telefono_usuario = None
-            id_vacancy = None
+            id_job_offer = None
     else:
         # Leer parámetros GET desde la URL
         query_params = st.query_params
         nombre_usuario = query_params.get("nombre", "Candidato")
         telefono_usuario = query_params.get("phone")
-        id_vacancy = query_params.get("vacancy")
+        id_job_offer = query_params.get("job-offer")
     
     # Título y descripción usando configuración
     st.subheader(INTERFACE_CONFIG["title"])
@@ -83,24 +65,23 @@ def lanzar_chatbot():
         st.markdown(INTERFACE_CONFIG["welcome_message"])
     
     # Mostrar información del usuario si está disponible
-    if nombre_usuario != "Candidato" or telefono_usuario or id_vacancy:
+    if nombre_usuario != "Candidato" or telefono_usuario or id_job_offer:
         with st.expander("👤 Información del candidato"):
             st.write(f"**Nombre:** {nombre_usuario}")
             if telefono_usuario:
                 st.write(f"**Teléfono:** {telefono_usuario}")
-            if id_vacancy:
-                st.write(f"**ID Vacante:** {id_vacancy}")
+            if id_job_offer:
+                st.write(f"**ID Oferta de Trabajo:** {id_job_offer}")
     
     # Inicializar el agente en session state si no existe
     if "rrhh_agent" not in st.session_state:
-        st.session_state.rrhh_agent = crear_agente()
-        #st.session_state.rrhh_agent = crear_agente_langgraph()
+        st.session_state.rrhh_agent = create_simple_rrhh_agent(id_job_offer)
         st.session_state.rrhh_conversation_started = False
         st.session_state.rrhh_messages = []
         # Almacenar información del usuario en session state
         st.session_state.nombre_usuario = nombre_usuario
         st.session_state.telefono_usuario = telefono_usuario
-        st.session_state.id_vacancy = id_vacancy
+        st.session_state.id_job_offer = id_job_offer
     
     # Botón para iniciar/reiniciar la conversación
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -111,8 +92,8 @@ def lanzar_chatbot():
             type=BUTTONS_CONFIG["start"]["type"]
         ):
             # Reiniciar el agente
-            st.session_state.rrhh_agent = crear_agente()
-            #st.session_state.rrhh_agent = crear_agente_langgraph()
+            job_offer_id = st.session_state.get("id_job_offer")
+            st.session_state.rrhh_agent = create_simple_rrhh_agent(job_offer_id)
             st.session_state.rrhh_conversation_started = True
             st.session_state.rrhh_messages = []
             
@@ -129,8 +110,8 @@ def lanzar_chatbot():
             BUTTONS_CONFIG["restart"]["text"], 
             type=BUTTONS_CONFIG["restart"]["type"]
         ):
-            st.session_state.rrhh_agent = crear_agente()
-            #st.session_state.rrhh_agent = crear_agente_langgraph()
+            job_offer_id = st.session_state.get("id_job_offer")
+            st.session_state.rrhh_agent = create_simple_rrhh_agent(job_offer_id)
             st.session_state.rrhh_conversation_started = False
             st.session_state.rrhh_messages = []
             st.rerun()
@@ -271,30 +252,14 @@ def lanzar_chatbot():
             st.markdown(HELP_CONFIG["tips"])
 
 
-def mostrar_estadisticas_rrhh():
-    """
-    Muestra estadísticas básicas del agente de RRHH (opcional)
-    """
-    if st.session_state.get("rrhh_conversation_started", False):
-        summary = st.session_state.rrhh_agent.get_conversation_summary()
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric(
-                METRICS_CONFIG["questions_label"], 
-                summary.get('questions_asked', 0)
-            )
-        
-        with col2:
-            st.metric(
-                METRICS_CONFIG["total_label"], 
-                summary.get('total_questions', 0)
-            )
-        
-        with col3:
-            progress = summary.get('questions_asked', 0) / max(summary.get('total_questions', 1), 1)
-            st.metric(
-                METRICS_CONFIG["progress_label"], 
-                f"{int(progress * 100)}%"
-            ) 
+
+if __name__ == "__main__":
+    # Configuración de la página para deployment independiente
+    st.set_page_config(
+        page_title="Adaptiera - Chatbot RRHH",
+        page_icon="🤖",
+        layout="wide"
+    )
+    
+    # Ejecutar el chatbot directamente
+    lanzar_chatbot() 

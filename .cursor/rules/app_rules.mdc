@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Desarrollo en `app/`
+
+-   **`main.py`**: Define aquí el punto de entrada principal de la aplicación si es relevante (ej: para una aplicación Streamlit o FastAPI).
+-   **`views/`**: Cada archivo o módulo en `views/` debe corresponder a una funcionalidad o pantalla específica de la aplicación.
+-   **`components/`**: Diseña los componentes para que sean reutilizables en diferentes vistas.
+-   **`assets/`**: Organiza los recursos estáticos en subcarpetas por tipo (ej: `assets/images/`, `assets/css/`).
+

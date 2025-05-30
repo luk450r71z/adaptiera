@@ -1,0 +1,12 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## Desarrollo en `tests/`
+
+-   Crea un archivo de prueba por cada módulo principal del código fuente que estés probando.
+-   Nombra los archivos de prueba con el prefijo `test_` seguido del nombre del módulo a probar (ej: `test_nombre_modulo.py`).
+-   Utiliza `pytest` como framework de pruebas.
+-   Emplea `pytest fixtures` para la configuración común de pruebas (setup) y para el desmontaje (teardown) si es necesario.
+-   Asegúrate de que las pruebas sean independientes y no tengan efectos secundarios entre ellas.

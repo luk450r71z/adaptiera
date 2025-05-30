@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## Desarrollo en `services/`
+
+-   Crea un archivo Python (`.py`) por cada servicio externo que se integre (ej: `gmail_service.py`, `twilio_service.py`).
+-   Implementa un manejo de errores robusto, incluyendo reintentos y timeouts cuando sea apropiado.
+-   La configuración de los servicios (API keys, URLs) debe cargarse desde variables de entorno a través de `core/config.py`, no hardcodearlas.

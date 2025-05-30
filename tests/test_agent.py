@@ -1,134 +1,102 @@
 #!/usr/bin/env python3
 """
-Script de prueba para el agente conversacional de RRHH.
+Test básico del agente de RRHH simplificado.
 """
 
-import os
 import sys
+import os
 from pathlib import Path
 
-# Agregar el directorio raíz al path para importar módulos
+# Agregar el directorio raíz al path para importaciones
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
-from agents.agent import crear_agente
+from agents.simple_agent import create_simple_rrhh_agent
 
-
-def test_agent_conversation():
-    """Prueba básica del agente conversacional"""
+def test_agent_basic():
+    """Prueba básica del agente"""
+    print("🧪 Iniciando prueba básica del agente...")
     
-    print("🤖 Iniciando prueba del agente de RRHH...")
-    print("=" * 50)
-    
-    # Crear el agente
-    agent = crear_agente()
+    # Crear agente
+    agent = create_simple_rrhh_agent()
     
     # Iniciar conversación
-    print("🚀 Iniciando conversación...")
-    initial_message = agent.start_conversation()
-    print(f"🤖 Agente: {initial_message}")
-    print()
+    print("\n1. Iniciando conversación...")
+    response = agent.start_conversation()
+    print(f"Agente: {response}")
     
     # Simular respuestas del usuario
-    test_responses = [
-        "Juan Pérez García",
-        "Trabajé 3 años como desarrollador Python en una startup",
-        "Python, JavaScript, SQL, Docker, Git",
-        "Me interesa el crecimiento profesional y los desafíos técnicos",
-        "Entre 50,000 y 60,000 pesos mensuales"
+    responses = [
+        "Juan Pérez",
+        "Tengo 3 años de experiencia como desarrollador",
+        "Python, JavaScript, React"
     ]
     
-    for i, response in enumerate(test_responses):
-        print(f"👤 Usuario: {response}")
-        
-        # Procesar respuesta
-        agent_response = agent.process_user_input(response)
-        print(f"🤖 Agente: {agent_response}")
-        print()
-        
-        # Verificar si la conversación terminó
-        if agent.is_conversation_complete():
-            print("✅ Conversación completada!")
+    for i, user_input in enumerate(responses, 2):
+        if not agent.is_conversation_complete():
+            print(f"\n{i}. Usuario: {user_input}")
+            response = agent.process_user_input(user_input)
+            print(f"Agente: {response}")
+        else:
             break
     
     # Mostrar resumen
+    print("\n📊 Resumen final:")
     summary = agent.get_conversation_summary()
-    print("📊 Resumen de la conversación:")
-    print(f"   - Preguntas respondidas: {summary.get('questions_asked', 0)}")
-    print(f"   - Total de preguntas: {summary.get('total_questions', 0)}")
-    print(f"   - Conversación completa: {summary.get('complete', False)}")
-    print(f"   - Total de mensajes: {summary.get('messages_count', 0)}")
+    print(f"Respuestas: {summary['questions_asked']}/{summary['total_questions']}")
+    print(f"Conversación completa: {summary['complete']}")
     
-    print("\n🎉 Prueba completada exitosamente!")
+    return True
 
-
-def test_agent_interactive():
-    """Prueba interactiva del agente"""
+def test_agent_with_vacancy():
+    """Prueba el agente con una vacante específica"""
+    print("\n🧪 Iniciando prueba con vacante específica...")
     
-    print("🤖 Modo interactivo del agente de RRHH")
-    print("Escribe 'salir' para terminar")
-    print("=" * 50)
-    
-    # Crear el agente
-    agent = crear_agente()
+    # Crear agente con vacante específica
+    agent = create_simple_rrhh_agent("dev_frontend")
     
     # Iniciar conversación
-    initial_message = agent.start_conversation()
-    print(f"🤖 Agente: {initial_message}")
+    print("\n1. Iniciando conversación para dev_frontend...")
+    response = agent.start_conversation()
+    print(f"Agente: {response[:100]}...")
     
-    while True:
-        try:
-            # Obtener input del usuario
-            user_input = input("\n👤 Tú: ").strip()
-            
-            if user_input.lower() in ['salir', 'exit', 'quit']:
-                print("👋 ¡Hasta luego!")
-                break
-            
-            if not user_input:
-                continue
-            
-            # Procesar respuesta
-            agent_response = agent.process_user_input(user_input)
-            print(f"🤖 Agente: {agent_response}")
-            
-            # Verificar si la conversación terminó
-            if agent.is_conversation_complete():
-                print("\n✅ Conversación completada!")
-                
-                # Mostrar resumen
-                summary = agent.get_conversation_summary()
-                print("\n📊 Resumen:")
-                for question, answer in summary.get('responses', {}).items():
-                    print(f"   P: {question}")
-                    print(f"   R: {answer}")
-                    print()
-                break
-                
-        except KeyboardInterrupt:
-            print("\n👋 ¡Hasta luego!")
-            break
-        except Exception as e:
-            print(f"❌ Error: {e}")
+    # Verificar que cargó las preguntas específicas
+    summary = agent.get_conversation_summary()
+    print(f"Total de preguntas cargadas: {summary['total_questions']}")
+    
+    return True
 
+def main():
+    """Función principal"""
+    print("=" * 50)
+    print("PRUEBAS DEL AGENTE SIMPLE DE RRHH")
+    print("=" * 50)
+    
+    tests = [
+        ("Prueba básica", test_agent_basic),
+        ("Prueba con vacante", test_agent_with_vacancy)
+    ]
+    
+    results = []
+    
+    for name, test_func in tests:
+        try:
+            print(f"\n{name}:")
+            result = test_func()
+            results.append((name, result))
+            print(f"✅ {name} completada")
+        except Exception as e:
+            print(f"❌ {name} falló: {e}")
+            results.append((name, False))
+    
+    # Resumen final
+    print("\n" + "=" * 50)
+    print("RESUMEN DE PRUEBAS")
+    print("=" * 50)
+    
+    for name, result in results:
+        status = "✅ PASÓ" if result else "❌ FALLÓ"
+        print(f"{name}: {status}")
 
 if __name__ == "__main__":
-    print("Selecciona el modo de prueba:")
-    print("1. Prueba automática")
-    print("2. Prueba interactiva")
-    
-    try:
-        choice = input("Ingresa tu opción (1 o 2): ").strip()
-        
-        if choice == "1":
-            test_agent_conversation()
-        elif choice == "2":
-            test_agent_interactive()
-        else:
-            print("Opción no válida. Ejecutando prueba automática...")
-            test_agent_conversation()
-            
-    except KeyboardInterrupt:
-        print("\n👋 ¡Hasta luego!")
-    except Exception as e:
-        print(f"❌ Error: {e}") 
+    main() 

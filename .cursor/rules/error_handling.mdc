@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Manejo de Errores
+
+-   Utiliza bloques `try-except` de forma obligatoria para operaciones que puedan fallar, especialmente las que involucran I/O, llamadas a red o interacciones con servicios externos.
+-   Captura excepciones específicas en lugar de `Exception` genérica siempre que sea posible. Si capturas `Exception`, asegúrate de manejarla adecuadamente o relanzarla (`raise`).
+-   Utiliza el sistema de logging configurado en `core/logger.py` para registrar errores y excepciones. Evita `print()` para esto.
+-   Los mensajes de error deben ser informativos, claros y en español, proporcionando contexto útil para el diagnóstico.
+

@@ -1,0 +1,7 @@
+{
+  "questions": [
+    "¿Cuál es tu nombre completo?",
+    "¿Cuántos años de experiencia tienes desarrollando en React/Vue/Angular?",
+    "¿Qué frameworks de CSS prefieres utilizar (Bootstrap, Tailwind, Material-UI, etc.)?"
+  ]
+} 

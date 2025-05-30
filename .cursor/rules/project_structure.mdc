@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Estructura del Proyecto Adaptiera
+
+Al crear nuevos archivos o modificar la ubicación de existentes, respeta rigurosamente la siguiente estructura de carpetas. Si existe un archivo `estructura.md` en la raíz del proyecto, sus especificaciones prevalecen y deben ser consultadas (`@estructura.md`).
+
+-   **`app/`**: Aplicación principal. Contiene vistas, componentes de interfaz de usuario y assets.
+    -   `main.py`: Punto de entrada principal de la aplicación (si aplica).
+    -   `views/`: Módulos representando una vista o funcionalidad específica de la UI.
+    -   `components/`: Componentes de UI reutilizables.
+    -   `assets/`: Recursos estáticos (imágenes, CSS, etc.), organizados por tipo.
+-   **`agents/`**: Lógica de agentes de IA. Incluye herramientas específicas para agentes y nodos de decisión.
+    -   `agent.py`: Puede contener una clase base para todos los agentes.
+    -   `tools/`: Herramientas específicas que utilizan los agentes.
+    -   `nodes/`: Nodos de decisión, lógica de memoria o flujos específicos de agentes.
+-   **`services/`**: Clientes para interactuar con servicios externos (ej: Gmail, SMS, APIs de terceros).
+-   **`core/`**: Núcleo del sistema. Componentes transversales como configuración, seguridad, modelos de datos y logging.
+    -   `config.py`: Configuración centralizada, carga de variables de entorno.
+    -   `security.py`: Lógica de autenticación, autorización y otros aspectos de seguridad.
+    -   `models.py`: Definiciones de modelos de datos o esquemas (ej: Pydantic, SQLAlchemy).
+    -   `logger.py`: Configuración del sistema de logging.
+-   **`tools/`**: Herramientas de utilidad genéricas para el proyecto (ej: manipulación de prompts, fechas, lógica general no específica de un dominio).
+-   **`utils/`**: Utilidades muy generales y básicas (ej: helpers para strings, matemáticas, validaciones de tipo). Distinguir de `tools/` por su aplicabilidad más amplia y elemental.
+-   **`tests/`**: Pruebas unitarias y de integración.
+-   **`data/`**: Archivos de datos estáticos, plantillas, configuraciones iniciales si no van en `core/config.py`.
+
+**Regla fundamental**: Coloca los archivos ÚNICAMENTE en su carpeta designada según la descripción anterior.
+

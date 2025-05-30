@@ -3,71 +3,63 @@
 Script de prueba para verificar la interfaz de Streamlit del agente de RRHH.
 """
 
+import streamlit as st
 import sys
 import os
 from pathlib import Path
 
 # Agregar el directorio raíz al path
-root_dir = Path(__file__).parent
+root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
+# Importar componentes a probar
+from app.views.chatbot import lanzar_chatbot
+from agents.simple_agent import create_simple_rrhh_agent
+
 def test_imports():
-    """Prueba que todas las importaciones funcionen correctamente"""
-    print("🧪 Probando importaciones...")
+    """Prueba que las importaciones funcionen correctamente"""
+    print("\n🧪 Probando importaciones...")
     
     try:
         # Probar importación del agente
-        from agents.agent import crear_agente
-        print("✅ Agente importado correctamente")
+        agent = create_simple_rrhh_agent()
+        print("✅ Importación del agente exitosa")
         
-        # Probar importación de configuración
-        from core.rrhh_config import (
-            INTERFACE_CONFIG, 
-            BUTTONS_CONFIG, 
-            HELP_CONFIG, 
-            CUSTOM_CSS,
-            METRICS_CONFIG,
-            DOWNLOAD_CONFIG
-        )
-        print("✅ Configuración importada correctamente")
-        
-        # Probar importación de la vista
-        from app.views.rrhh_agent import mostrar_agente_rrhh
-        print("✅ Vista del agente importada correctamente")
+        # Probar creación del agente con vacante
+        agent_with_vacancy = create_simple_rrhh_agent("dev_frontend")
+        print("✅ Agente con vacante creado exitosamente")
         
         return True
         
-    except ImportError as e:
-        print(f"❌ Error de importación: {e}")
-        return False
     except Exception as e:
-        print(f"❌ Error inesperado: {e}")
+        print(f"❌ Error en importaciones: {e}")
         return False
 
 
-def test_agent_creation():
-    """Prueba la creación del agente"""
-    print("\n🧪 Probando creación del agente...")
+def test_agent_functionality():
+    """Prueba la funcionalidad básica del agente"""
+    print("\n🧪 Probando funcionalidad del agente...")
     
     try:
-        from agents.agent import crear_agente
-        
         # Crear agente
-        agent = crear_agente()
-        print("✅ Agente creado correctamente")
-        
-        # Probar métodos básicos
-        summary = agent.get_conversation_summary()
-        print(f"✅ Resumen inicial: {summary}")
+        agent = create_simple_rrhh_agent()
         
         # Probar inicio de conversación
-        initial_message = agent.start_conversation()
-        print(f"✅ Mensaje inicial: {initial_message[:100]}...")
+        response = agent.start_conversation()
+        print(f"✅ Conversación iniciada: {response[:50]}...")
+        
+        # Probar procesamiento de respuesta
+        user_response = agent.process_user_input("Juan Pérez")
+        print(f"✅ Respuesta procesada: {user_response[:50]}...")
+        
+        # Probar resumen
+        summary = agent.get_conversation_summary()
+        print(f"✅ Resumen obtenido: {summary}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error al crear agente: {e}")
+        print(f"❌ Error en funcionalidad del agente: {e}")
         return False
 
 
@@ -173,7 +165,7 @@ def main():
         test_configuration,
         test_data_files,
         test_environment,
-        test_agent_creation,
+        test_agent_functionality,
     ]
     
     passed = 0

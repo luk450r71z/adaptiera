@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Convenciones de Naming
+
+### Nombres de Archivos
+-   Utiliza `snake_case.py` para los módulos Python.
+-   Utiliza `PascalCase` para los nombres de clases.
+-   Los nombres deben ser descriptivos e indicar claramente la función del archivo o clase.
+
+### Variables y Funciones
+-   Utiliza `snake_case` para nombres de variables y funciones.
+-   Los nombres deben estar en español y ser claramente descriptivos de su propósito.
+-   Considera los siguientes prefijos cuando sea apropiado:
+    -   `es_` para variables booleanas (ej: `es_valido`, `es_visible`).
+    -   `lista_` para variables que almacenan listas (ej: `lista_usuarios`, `lista_items`).
+-   Evita abreviaciones confusas o excesivamente cortas. La claridad es prioritaria.
+
+### Constantes
+-   Define las constantes en `MAYUSCULAS_CON_GUIONES_BAJOS`.
+-   Decláralas principalmente en `core/config.py` o al inicio del módulo donde sean específicas y no globales.
+

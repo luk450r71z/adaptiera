@@ -1,0 +1,7 @@
+{
+  "questions": [
+    "¿Cuál es tu nombre completo?",
+    "¿Con qué lenguajes de programación backend tienes más experiencia (Python, Java, Node.js, etc.)?",
+    "¿Has trabajado con bases de datos relacionales y no relacionales? ¿Cuáles?"
+  ]
+} 

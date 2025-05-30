@@ -1,0 +1,81 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Reglas de Importación y Archivos __init__.py
+
+### 1. Archivos __init__.py Vacíos
+- **TODOS los archivos `__init__.py` deben mantenerse VACÍOS**
+- No agregar importaciones, re-exportaciones ni código en estos archivos
+- Esto previene dependencias circulares y mejora el rendimiento
+
+### 2. Importaciones Directas
+En lugar de importar desde `__init__.py`, siempre importar directamente desde el módulo específico:
+
+```python
+# ❌ MAL - No hacer esto
+from core.models import ConversationState
+from agents import state
+
+# ✅ BIEN - Hacer esto
+from core.models.conversation_models import ConversationState
+from agents.state import ConversationState
+```
+
+### 3. Estructura de Importaciones Recomendada
+
+#### Para modelos de datos:
+```python
+# Importar directamente desde el archivo específico
+from core.models.conversation_models import ConversationState, GraphState
+from core.models.contact_models import Contacto
+from core.models.email_models import EmailConfig, EmailSummary
+```
+
+#### Para servicios:
+```python
+# Importar directamente desde el archivo específico
+from services.gmail import GmailService
+from services.sms import SMSService
+from services.api_client import APIClient
+```
+
+#### Para herramientas:
+```python
+# Importar directamente desde el archivo específico
+from tools.prompt_utils import format_prompt
+from tools.date_utils import format_date
+from agents.tools.email_tool import send_email_summary
+```
+
+### 4. Beneficios de esta Práctica
+- **Previene dependencias circulares**: Al no tener código en `__init__.py`
+- **Mejora rendimiento**: Evita importaciones innecesarias
+- **Mayor claridad**: Es explícito de dónde viene cada importación
+- **Facilita refactoring**: Los cambios en un módulo no afectan otros
+- **Reduce errores**: Menos posibilidad de conflictos de nombres
+
+### 5. Ejemplo de Estructura Correcta
+
+```
+core/
+├── __init__.py                    # ← VACÍO
+├── config.py
+├── logger.py
+└── models/
+    ├── __init__.py               # ← VACÍO
+    ├── conversation_models.py
+    ├── contact_models.py
+    └── email_models.py
+```
+
+### 6. Al Crear Nuevos Módulos
+- Crear el archivo `__init__.py` vacío (solo para que Python reconozca el directorio como paquete)
+- Importar directamente desde los archivos `.py` específicos
+- Documentar claramente qué exporta cada archivo en comentarios del propio archivo
+
+### 7. Excepciones
+- Solo en casos muy específicos donde sea absolutamente necesario para compatibilidad hacia atrás
+- Debe ser aprobado explícitamente y documentado el motivo
+

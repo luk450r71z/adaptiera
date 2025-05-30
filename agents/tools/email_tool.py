@@ -103,4 +103,19 @@ def simulate_email_send(user_responses: Dict[str, str]) -> bool:
         print(f"Fecha y hora: {user_responses['timestamp']}")
     
     print("=== FIN DE SIMULACIÓN ===")
-    return True 
+    return True
+
+
+# Versiones directas (sin @tool) para uso interno
+def send_email_summary_direct(user_responses: Dict[str, str], recipient_email: str = None) -> bool:
+    """
+    Versión directa de send_email_summary (sin decorador @tool).
+    """
+    return send_email_summary.func(user_responses, recipient_email)
+
+
+def simulate_email_send_direct(user_responses: Dict[str, str]) -> bool:
+    """
+    Versión directa de simulate_email_send (sin decorador @tool).
+    """
+    return simulate_email_send.func(user_responses) 

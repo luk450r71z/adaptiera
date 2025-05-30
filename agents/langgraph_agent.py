@@ -3,15 +3,14 @@ from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 from langgraph.graph.message import add_messages
 
-from agents.state import ConversationState
-from agents.nodes import (
+from core.models.conversation_models import ConversationState
+from agents.nodes.conversation_nodes import (
     initialize_conversation_node,
     process_user_response_node,
     clarification_node,
     next_question_node,
     finalize_conversation_node,
-    decision_node,
-    dummy_decision_node
+    decision_node
 )
 
 
@@ -58,96 +57,18 @@ def conversation_to_graph_state(conv_state: ConversationState) -> GraphState:
     )
 
 
-# Funciones wrapper para los nodos
-def wrap_initialize_node(state: GraphState) -> GraphState:
-    conv_state = graph_to_conversation_state(state)
-    result = initialize_conversation_node(conv_state)
-    return conversation_to_graph_state(result)
-
-
-def wrap_process_response_node(state: GraphState) -> GraphState:
-    conv_state = graph_to_conversation_state(state)
-    result = process_user_response_node(conv_state)
-    return conversation_to_graph_state(result)
-
-
-def wrap_clarification_node(state: GraphState) -> GraphState:
-    conv_state = graph_to_conversation_state(state)
-    result = clarification_node(conv_state)
-    return conversation_to_graph_state(result)
-
-
-def wrap_next_question_node(state: GraphState) -> GraphState:
-    conv_state = graph_to_conversation_state(state)
-    result = next_question_node(conv_state)
-    return conversation_to_graph_state(result)
-
-
-def wrap_finalize_node(state: GraphState) -> GraphState:
-    conv_state = graph_to_conversation_state(state)
-    result = finalize_conversation_node(conv_state)
-    return conversation_to_graph_state(result)
-
-
-def wrap_decision_routing(state: GraphState) -> str:
-    conv_state = graph_to_conversation_state(state)
-    return decision_node(conv_state)
-
-
-def wrap_dummy_decision_node(state: GraphState) -> GraphState:
-    return state
-
-
 class AdaptieraRRHHAgent:
     """
-    Agente conversacional de RRHH usando LangGraph.
+    Agente conversacional de RRHH usando un ConversationState interno
+    con procesamiento directo de nodos.
     
     Este agente maneja entrevistas automatizadas, recopila respuestas,
     decide cuándo repreguntar y envía resúmenes por correo.
     """
     
     def __init__(self):
-        self.graph = self._create_graph()
-        self.current_state = None
-    
-    def _create_graph(self) -> StateGraph:
-        """Crea el grafo de estados de LangGraph"""
-        
-        # Crear el grafo con el estado compatible con LangGraph
-        workflow = StateGraph(GraphState)
-        
-        # Agregar nodos usando las funciones wrapper
-        workflow.add_node("initialize", wrap_initialize_node)
-        workflow.add_node("process_response", wrap_process_response_node)
-        workflow.add_node("clarify", wrap_clarification_node)
-        workflow.add_node("next_question", wrap_next_question_node)
-        workflow.add_node("finalize", wrap_finalize_node)
-        workflow.add_node("decision", wrap_dummy_decision_node)
-        
-        # Definir el punto de entrada
-        workflow.set_entry_point("initialize")
-        
-        # Agregar aristas condicionales desde el nodo de decisión
-        workflow.add_conditional_edges(
-            "decision",
-            wrap_decision_routing,
-            {
-                "process_response": "process_response",
-                "clarify": "clarify", 
-                "next_question": "next_question",
-                "finalize": "finalize",
-                "wait_for_user": END
-            }
-        )
-        
-        # Aristas desde otros nodos hacia decisión
-        workflow.add_edge("initialize", "decision")
-        workflow.add_edge("process_response", "decision")
-        workflow.add_edge("clarify", "decision")
-        workflow.add_edge("next_question", "decision")
-        workflow.add_edge("finalize", END)
-        
-        return workflow.compile()
+        self.state = ConversationState()
+        self.initialized = False
     
     def start_conversation(self) -> str:
         """
@@ -156,28 +77,22 @@ class AdaptieraRRHHAgent:
         Returns:
             Mensaje inicial del agente
         """
-        # Crear nuevo estado inicial
-        initial_state = GraphState(
-            messages=[],
-            pending_questions=[],
-            user_responses={},
-            current_question="",
-            current_question_index=0,
-            needs_clarification=False,
-            clarification_reason="",
-            conversation_complete=False,
-            metadata={}
-        )
-        
-        # Ejecutar el grafo hasta que necesite input del usuario
-        result = self.graph.invoke(initial_state)
-        self.current_state = result
-        
-        # Retornar el último mensaje del agente
-        if self.current_state.get("messages"):
-            last_messages = [msg for msg in self.current_state["messages"] if isinstance(msg, AIMessage)]
-            if last_messages:
-                return last_messages[-1].content
+        try:
+            print("🚀 Iniciando conversación...")
+            
+            # Inicializar estado
+            self.state = initialize_conversation_node(self.state)
+            self.initialized = True
+            
+            # Retornar el último mensaje del agente
+            if self.state.messages:
+                ai_messages = [msg for msg in self.state.messages if isinstance(msg, AIMessage)]
+                if ai_messages:
+                    return ai_messages[-1].content
+            
+        except Exception as e:
+            print(f"Error al iniciar conversación: {e}")
+            return "Lo siento, hubo un error al iniciar la conversación. ¿Puedes intentar de nuevo?"
         
         return "¡Hola! Soy el asistente de RRHH. ¿Cómo puedo ayudarte?"
     
@@ -191,43 +106,62 @@ class AdaptieraRRHHAgent:
         Returns:
             Respuesta del agente
         """
-        if not self.current_state:
-            return self.start_conversation()
-        
-        # Agregar mensaje del usuario al estado
-        user_message = HumanMessage(content=user_input)
-        current_messages = list(self.current_state.get("messages", []))
-        current_messages.append(user_message)
-        
-        # Actualizar el estado con el nuevo mensaje
-        updated_state = dict(self.current_state)
-        updated_state["messages"] = current_messages
-        
-        # Ejecutar el grafo
-        result = self.graph.invoke(updated_state)
-        self.current_state = result
-        
-        # Retornar el último mensaje del agente
-        if self.current_state.get("messages"):
-            messages = self.current_state["messages"]
-            # Buscar el último mensaje del agente después del mensaje del usuario
-            ai_messages = []
-            for i, msg in enumerate(messages):
-                if isinstance(msg, AIMessage) and i > 0:
-                    # Verificar que hay un mensaje del usuario antes
-                    prev_msg = messages[i-1]
-                    if isinstance(prev_msg, HumanMessage) and prev_msg.content == user_input:
-                        ai_messages.append(msg)
+        # Si no está inicializado, inicializar primero
+        if not self.initialized:
+            initial_response = self.start_conversation()
+            # Después procesar el input
             
-            if ai_messages:
-                return ai_messages[-1].content
+        try:
+            # Agregar mensaje del usuario
+            user_message = HumanMessage(content=user_input)
+            self.state.messages.append(user_message)
             
-            # Fallback: último mensaje de IA
-            last_ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
-            if last_ai_messages:
-                return last_ai_messages[-1].content
+            # Procesar según el estado actual
+            while True:
+                decision = decision_node(self.state)
+                print(f"Decisión tomada: {decision}")
+                
+                if decision == "process_response":
+                    self.state = process_user_response_node(self.state)
+                elif decision == "clarify":
+                    self.state = clarification_node(self.state)
+                    break  # Esperamos respuesta del usuario
+                elif decision == "next_question":
+                    self.state = next_question_node(self.state)
+                    break  # Esperamos respuesta del usuario o terminamos
+                elif decision == "finalize":
+                    self.state = finalize_conversation_node(self.state)
+                    break  # Conversación terminada
+                elif decision == "wait_for_user":
+                    break  # Esperamos respuesta del usuario
+                else:
+                    print(f"⚠️ Decisión desconocida: {decision}")
+                    break
+            
+            # Retornar el último mensaje del agente
+            if self.state.messages:
+                # Buscar el último mensaje del agente después del input del usuario
+                user_message_found = False
+                for i in range(len(self.state.messages) - 1, -1, -1):
+                    msg = self.state.messages[i]
+                    if isinstance(msg, HumanMessage) and msg.content == user_input:
+                        user_message_found = True
+                        continue
+                    if user_message_found and isinstance(msg, AIMessage):
+                        return msg.content
+                
+                # Fallback: último mensaje del agente
+                ai_messages = [msg for msg in self.state.messages if isinstance(msg, AIMessage)]
+                if ai_messages:
+                    return ai_messages[-1].content
+            
+        except Exception as e:
+            print(f"Error al procesar input del usuario: {e}")
+            import traceback
+            traceback.print_exc()
+            return "Lo siento, hubo un problema procesando tu respuesta. ¿Puedes intentar de nuevo?"
         
-        return "Lo siento, hubo un problema procesando tu respuesta. ¿Puedes intentar de nuevo?"
+        return "Lo siento, no pude procesar tu respuesta. ¿Puedes intentar de nuevo?"
     
     def is_conversation_complete(self) -> bool:
         """
@@ -236,7 +170,7 @@ class AdaptieraRRHHAgent:
         Returns:
             True si la conversación está completa
         """
-        return self.current_state and self.current_state.get("conversation_complete", False)
+        return self.state.conversation_complete
     
     def get_conversation_summary(self) -> Dict[str, Any]:
         """
@@ -245,20 +179,18 @@ class AdaptieraRRHHAgent:
         Returns:
             Diccionario con el resumen de la conversación
         """
-        if not self.current_state:
-            return {}
-        
         return {
-            "responses": self.current_state.get("user_responses", {}),
-            "questions_asked": len(self.current_state.get("user_responses", {})),
-            "total_questions": len(self.current_state.get("pending_questions", [])),
-            "complete": self.current_state.get("conversation_complete", False),
-            "messages_count": len(self.current_state.get("messages", []))
+            "responses": self.state.user_responses,
+            "questions_asked": len(self.state.user_responses),
+            "total_questions": len(self.state.pending_questions),
+            "complete": self.state.conversation_complete,
+            "messages_count": len(self.state.messages)
         }
     
     def reset_conversation(self):
         """Reinicia la conversación"""
-        self.current_state = None
+        self.state = ConversationState()
+        self.initialized = False
 
 
 # Función de conveniencia para crear una instancia del agente

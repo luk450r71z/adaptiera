@@ -2,13 +2,14 @@ from typing import Dict, Any
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_groq import ChatGroq
 import os
-from dotenv import load_dotenv
-from agents.state import ConversationState
-from agents.tools.file_search_tool import search_questions_file, save_user_responses
-from agents.tools.email_tool import simulate_email_send
+from core.models.conversation_models import ConversationState
+from agents.tools.question_search_tool import search_questions_file_direct
+from agents.tools.response_save_tool import save_user_responses_direct
+from agents.tools.email_tool import simulate_email_send_direct
+from utils.env_utils import load_env_variables
 
-# Cargar variables de entorno desde .env
-load_dotenv()
+# Cargar variables de entorno
+load_env_variables()
 
 
 def initialize_conversation_node(state: ConversationState) -> ConversationState:
@@ -18,26 +19,22 @@ def initialize_conversation_node(state: ConversationState) -> ConversationState:
     print("🚀 Inicializando conversación...")
     
     # Cargar preguntas desde archivo
-    questions = search_questions_file("data/questions.json")
+    questions = search_questions_file_direct("data/questions.json")
     state.pending_questions = questions
     state.current_question_index = 0
     
     if questions:
         state.current_question = questions[0]
         
-        # Mensaje de bienvenida
-        welcome_message = AIMessage(content="""
-¡Hola! Soy el asistente de RRHH de Adaptiera. 
+        # Mensaje de bienvenida combinado con la primera pregunta
+        welcome_and_question_message = AIMessage(content=f"""¡Hola! Soy el asistente de RRHH de Adaptiera. 
 Voy a realizarte algunas preguntas para conocerte mejor.
 Responde con la mayor sinceridad posible.
 
 Empecemos:
-""")
-        state.messages.append(welcome_message)
-        
-        # Primera pregunta
-        question_message = AIMessage(content=state.current_question)
-        state.messages.append(question_message)
+
+{state.current_question}""")
+        state.messages.append(welcome_and_question_message)
     
     return state
 
@@ -103,7 +100,7 @@ def process_user_response_node(state: ConversationState) -> ConversationState:
     if is_satisfactory:
         # Guardar respuesta satisfactoria
         state.user_responses[current_question] = user_response
-        save_user_responses(state.user_responses, "data/user_responses.json")
+        save_user_responses_direct(state.user_responses, "data/user_responses.json")
         state.needs_clarification = False
         state.clarification_reason = None
         print(f"✅ Respuesta aceptada para: {current_question}")
@@ -172,7 +169,7 @@ def finalize_conversation_node(state: ConversationState) -> ConversationState:
     print("🏁 Finalizando conversación...")
     
     # Enviar correo (simulado por ahora)
-    email_success = simulate_email_send(state.user_responses)
+    email_success = simulate_email_send_direct(state.user_responses)
     
     if email_success:
         final_message = AIMessage(content="""
@@ -202,35 +199,38 @@ def decision_node(state: ConversationState) -> str:
     Esta función NO modifica el estado, solo retorna la decisión.
     """
     print("🎯 Tomando decisión sobre el siguiente paso...")
+    print(f"   Estado actual: conversation_complete={state.conversation_complete}, needs_clarification={state.needs_clarification}")
+    print(f"   Pregunta actual: {state.current_question}")
+    print(f"   Índice: {state.current_question_index}, Total preguntas: {len(state.pending_questions)}")
     
-    # Si la conversación está completa, ir al nodo final
+    # 1. Si ya está completa, finalizar
     if state.conversation_complete:
-        print("   → Conversación completa, finalizando...")
+        print("   ➡️ Decisión: finalize")
         return "finalize"
     
-    # Si necesita aclaración, ir al nodo de aclaración
+    # 2. Si no hay pregunta actual (inicial), procesar primera respuesta
+    if not state.current_question:
+        print("   ➡️ Decisión: wait_for_user")
+        return "wait_for_user"
+    
+    # 3. Si necesita clarificación, solicitar más información
     if state.needs_clarification:
-        print("   → Necesita aclaración...")
+        print("   ➡️ Decisión: clarify")
         return "clarify"
     
-    # Si hay un mensaje del usuario pendiente de procesar
-    if state.messages and isinstance(state.messages[-1], HumanMessage):
-        print("   → Procesando respuesta del usuario...")
+    # 4. Si la respuesta fue satisfactoria, seguir con siguiente pregunta
+    last_message = state.messages[-1] if state.messages else None
+    if isinstance(last_message, HumanMessage):
+        # Hay una respuesta nueva del usuario, procesarla
+        print("   ➡️ Decisión: process_response")
         return "process_response"
     
-    # Si no hay pregunta actual, ir a la siguiente
-    if not state.current_question:
-        print("   → Avanzando a siguiente pregunta...")
+    # 5. Si acabamos de procesar una respuesta satisfactoria, ir a siguiente pregunta
+    if (state.current_question_index < len(state.pending_questions) and 
+        not state.needs_clarification):
+        print("   ➡️ Decisión: next_question")
         return "next_question"
     
-    # Por defecto, esperar respuesta del usuario
-    print("   → Esperando respuesta del usuario...")
+    # 6. Por defecto, esperar respuesta del usuario
+    print("   ➡️ Decisión: wait_for_user")
     return "wait_for_user"
-
-
-def dummy_decision_node(state: ConversationState) -> ConversationState:
-    """
-    Nodo dummy que no hace nada, solo para mantener la estructura del grafo.
-    La lógica real está en la función decision_node que se usa para routing.
-    """
-    return state 

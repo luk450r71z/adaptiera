@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+## Desarrollo en `agents/`
+
+-   **`agent.py`**: Considera definir una clase base (`AgentBase`) si hay lógica común compartida entre múltiples agentes.
+-   **`tools/`**: Las herramientas deben ser específicas para las capacidades de los agentes. Cada herramienta debe ser modular y enfocada en una tarea concreta.
+-   **`nodes/`**: Utiliza esta carpeta para definir nodos de decisión, flujos lógicos o componentes de memoria que los agentes puedan utilizar.

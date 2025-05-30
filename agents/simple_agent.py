@@ -7,111 +7,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 import datetime
 
-from agents.state import ConversationState
-
-# Importar funciones directamente sin decoradores @tool
-def search_questions_file_direct(file_path: str = "data/questions.json") -> List[str]:
-    """
-    Busca y carga las preguntas desde un archivo local (versión directa sin @tool).
-    """
-    try:
-        # Verificar si el archivo existe
-        if not os.path.exists(file_path):
-            # Si no existe, crear un archivo de ejemplo
-            default_questions = [
-                "¿Cuál es tu nombre completo?",
-                "¿Cuál es tu experiencia laboral previa?",
-                "¿Qué habilidades técnicas posees?",
-                "¿Por qué estás interesado en esta posición?",
-                "¿Cuáles son tus expectativas salariales?"
-            ]
-            
-            # Crear el directorio si no existe
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump({"questions": default_questions}, f, ensure_ascii=False, indent=2)
-            
-            return default_questions
-        
-        # Cargar preguntas del archivo
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            
-        if isinstance(data, dict) and "questions" in data:
-            return data["questions"]
-        elif isinstance(data, list):
-            return data
-        else:
-            raise ValueError("Formato de archivo no válido")
-            
-    except Exception as e:
-        print(f"Error al cargar preguntas: {e}")
-        # Retornar preguntas por defecto en caso de error
-        return [
-            "¿Cuál es tu nombre completo?",
-            "¿Cuál es tu experiencia laboral previa?",
-            "¿Qué habilidades técnicas posees?"
-        ]
-
-def save_user_responses_direct(responses: Dict[str, str], file_path: str = "data/user_responses.json") -> bool:
-    """
-    Guarda las respuestas del usuario en un archivo local (versión directa sin @tool).
-    """
-    try:
-        # Crear el directorio si no existe
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        # Agregar timestamp
-        responses["timestamp"] = datetime.datetime.now().isoformat()
-        
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(responses, f, ensure_ascii=False, indent=2)
-            
-        return True
-        
-    except Exception as e:
-        print(f"Error al guardar respuestas: {e}")
-        return False
-
-def simulate_email_send_direct(user_responses: Dict[str, str]) -> bool:
-    """
-    Simula el envío de correo para pruebas (versión directa sin @tool).
-    """
-    print("=== SIMULACIÓN DE ENVÍO DE CORREO ===")
-    print("Resumen de la entrevista:")
-    print("-" * 40)
-    
-    for question, answer in user_responses.items():
-        if question != "timestamp":
-            print(f"P: {question}")
-            print(f"R: {answer}")
-            print()
-    
-    if "timestamp" in user_responses:
-        print(f"Fecha y hora: {user_responses['timestamp']}")
-    
-    print("=== FIN DE SIMULACIÓN ===")
-    return True
-
-# Cargar variables de entorno desde .env de manera más robusta
-def load_env_variables():
-    """Carga variables de entorno desde diferentes ubicaciones posibles"""
-    current_dir = Path.cwd()
-    possible_env_files = [
-        current_dir / ".env",
-        current_dir.parent / ".env",
-        Path(__file__).parent / ".env",
-        Path(__file__).parent.parent / ".env"
-    ]
-    
-    for env_file in possible_env_files:
-        if env_file.exists():
-            load_dotenv(env_file, override=True)
-            return
-    
-    # Fallback: cargar desde ubicación por defecto
-    load_dotenv(override=True)
+from core.models.conversation_models import ConversationState
+from agents.tools.question_search_tool import search_questions_file_direct
+from agents.tools.response_save_tool import save_user_responses_direct
+from agents.tools.email_tool import simulate_email_send_direct
+from utils.env_utils import load_env_variables
 
 # Cargar variables de entorno al importar el módulo
 load_env_variables()
@@ -123,11 +23,26 @@ class SimpleRRHHAgent:
     
     Este agente maneja entrevistas automatizadas de manera secuencial,
     recopila respuestas, decide cuándo repreguntar y envía resúmenes por correo.
+    Puede cargar preguntas específicas según el ID de vacante.
     """
     
-    def __init__(self):
+    def __init__(self, id_job_offer: str = None):
+        """
+        Inicializa el agente de RRHH.
+        
+        Args:
+            id_job_offer: ID de la oferta de trabajo para cargar preguntas específicas
+        """
         self.state = ConversationState()
         self.initialized = False
+        self.id_job_offer = id_job_offer
+        
+        # Guardar información de la vacante en metadatos
+        if id_job_offer:
+            self.state.metadata["id_job_offer"] = id_job_offer
+            print(f"🎯 Agente inicializado para oferta de trabajo: {id_job_offer}")
+        else:
+            print("🎯 Agente inicializado con preguntas generales")
     
     def start_conversation(self) -> str:
         """
@@ -138,20 +53,25 @@ class SimpleRRHHAgent:
         """
         print("🚀 Inicializando conversación...")
         
-        # Cargar preguntas desde archivo
-        questions = search_questions_file_direct("data/questions.json")
+        # Cargar preguntas desde archivo específico o por defecto
+        questions = search_questions_file_direct("data/questions.json", self.id_job_offer)
         self.state.pending_questions = questions
         self.state.current_question_index = 0
         
         if questions:
             self.state.current_question = questions[0]
             
-            # Mensaje de bienvenida
-            welcome_message = AIMessage(content="""¡Hola! Soy el asistente de RRHH de Adaptiera. 
+            # Mensaje de bienvenida personalizado según la vacante
+            welcome_content = """¡Hola! Soy el asistente de RRHH de Adaptiera. 
 Voy a realizarte algunas preguntas para conocerte mejor.
-Responde con la mayor sinceridad posible.
-
-Empecemos:""")
+Responde con la mayor sinceridad posible."""
+            
+            if self.id_job_offer:
+                welcome_content += f"\n\nEsta entrevista es para la oferta de trabajo: **{self.id_job_offer}**"
+            
+            welcome_content += "\n\nEmpecemos:"
+            
+            welcome_message = AIMessage(content=welcome_content)
             self.state.messages.append(welcome_message)
             
             # Primera pregunta
@@ -188,7 +108,14 @@ Empecemos:""")
         if is_satisfactory:
             # Guardar respuesta satisfactoria
             self.state.user_responses[self.state.current_question] = user_input
-            save_user_responses_direct(self.state.user_responses, "data/user_responses.json")
+            
+            # Crear nombre de archivo basado en id_job_offer
+            if self.id_job_offer:
+                response_file = f"data/user_responses_{self.id_job_offer}.json"
+            else:
+                response_file = "data/user_responses.json"
+            
+            save_user_responses_direct(self.state.user_responses, response_file)
             self.state.needs_clarification = False
             self.state.clarification_reason = None
             print(f"✅ Respuesta aceptada para: {self.state.current_question}")
@@ -369,11 +296,14 @@ pero nuestro equipo se pondrá en contacto contigo pronto.""")
 
 
 # Función de conveniencia para crear una instancia del agente
-def create_simple_rrhh_agent() -> SimpleRRHHAgent:
+def create_simple_rrhh_agent(id_job_offer: str = None) -> SimpleRRHHAgent:
     """
     Crea una nueva instancia del agente de RRHH simplificado.
+    
+    Args:
+        id_job_offer: ID de la oferta de trabajo para cargar preguntas específicas
     
     Returns:
         Instancia del agente configurada
     """
-    return SimpleRRHHAgent() 
+    return SimpleRRHHAgent(id_job_offer) 

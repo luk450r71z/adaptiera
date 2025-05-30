@@ -1,7 +1,10 @@
 import streamlit as st
-from app.views.form import mostrar_formulario
-from app.views.chatbot import lanzar_chatbot
-from app.views.form_candidate_contact import mostrar_formulario as mostrar_formulario_candidatos
+import sys
+import os
+# Añadir el directorio actual al path para los imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from views.chatbot import lanzar_chatbot
+from views.form_candidate_contact import mostrar_formulario as mostrar_formulario_candidatos
 
 # Configuración de la página
 st.set_page_config(

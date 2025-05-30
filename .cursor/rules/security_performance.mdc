@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Seguridad
+
+-   **NO hardcodear credenciales**: Nunca incluyas API keys, contraseñas u otra información sensible directamente en el código. Utiliza variables de entorno gestionadas a través de `core/config.py`.
+-   **Validación de Entradas**: Valida todas las entradas provenientes de usuarios o sistemas externos para prevenir vulnerabilidades (ej: inyección, XSS).
+-   **Sanitización de Datos**: Sanitiza los datos antes de enviarlos a APIs externas o de guardarlos en bases de datos, según sea necesario.
+
+## Performance
+
+-   Evita bucles anidados innecesarios si existen alternativas más eficientes.
+-   Utiliza comprensiones de lista, generadores y funciones `map`/`filter` cuando sean apropiados y mejoren la legibilidad y eficiencia.
+-   Considera el uso de caché para operaciones costosas y que se ejecutan frecuentemente con los mismos parámetros.
+-   Asegura la liberación de recursos (ej: archivos, conexiones de red) utilizando context managers (`with` statements) o bloques `finally`.
+
